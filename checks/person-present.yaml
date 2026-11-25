@@ -1,0 +1,54 @@
+id: person-present
+version: 1
+title: Is there really a person where the detector says?
+applies_to:
+  labels:
+  - person
+frames:
+  count: 2
+  window_s:
+  - -0.5
+  - 0.5
+  crop: both
+  context: 0.6
+prompt: |
+  The detector reported {subject}.
+  Is a real person there (not a reflection, a poster, a mannequin, a shadow or a pile of clothes)?
+  - confirmed: a real person is clearly visible there.
+  - rejected: there is no real person there.
+  - unclear: too dark, too small or blocked to tell.
+  The description says what is actually at that spot, in one sentence.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4

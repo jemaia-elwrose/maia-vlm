@@ -1,0 +1,58 @@
+# One clip per check, trimmed to the event, plus cross-checks that should come back "rejected".
+# Run:  maia-vlm run sets/test-clips/cases.yaml --media <folder with the clips>
+# Boxes are x1,y1,x2,y2 in pixels of each clip, read off a frame at the event time.
+media: media
+defaults: {fps: 5, at: 5}
+
+cases:
+  # --- a queue in a bank lobby -----------------------------------------------------------
+  - {id: queue-describe, clip: line_waiting_720p.mp4, check: describe}
+  - {id: queue-person, clip: line_waiting_720p.mp4, check: person-present, box: [95, 221, 323, 519], expect: confirmed,
+     note: "woman behind the couch, leaning over it to reach her purse"}
+  - {id: queue-fall-x, clip: line_waiting_720p.mp4, check: fall, box: [95, 221, 323, 519], expect: rejected,
+     note: "cross-check: bending over a couch is not a fall"}
+  - {id: queue-fight-x, clip: line_waiting_720p.mp4, check: fight, box: [95, 221, 323, 519], expect: rejected,
+     note: "cross-check: people waiting, no fight"}
+
+  # --- a facility gate: rider without a hard hat ------------------------------------------
+  - {id: gate-describe, clip: Helmet.mp4, check: describe}
+  - {id: gate-helmet, clip: Helmet.mp4, check: helmet, box: [733, 166, 839, 333], at: 5, expect: confirmed,
+     note: "rider in a cap or bare-headed: no hard hat"}
+
+  # --- a jewellery shop: phone use --------------------------------------------------------
+  - {id: shop-describe, clip: jewellery-phone-1.mp4, check: describe}
+  - {id: shop-phone, clip: jewellery-phone-1.mp4, check: phone-use, box: [392, 149, 776, 622], at: 1, expect: confirmed,
+     note: "woman in a blazer looking at her phone"}
+  - {id: shop-smoking-x, clip: jewellery-phone-1.mp4, check: smoking, box: [392, 149, 776, 622], at: 1, expect: rejected,
+     note: "cross-check: a phone, not a cigarette"}
+  - {id: shop-concealment-x, clip: jewellery-phone-1.mp4, check: concealment, box: [392, 149, 776, 622], at: 1,
+     expect: rejected, note: "cross-check: holding a phone, nothing hidden"}
+
+  # --- smoking ---------------------------------------------------------------------------------
+  - {id: smoke-describe, clip: smoke_026.mp4, check: describe}
+  - {id: smoke-smoking, clip: smoke_026.mp4, check: smoking, box: [47, 4, 311, 239], at: 5, expect: confirmed}
+  - {id: smoke-phone-x, clip: smoke_026.mp4, check: phone-use, box: [47, 4, 311, 239], at: 5, expect: rejected,
+     note: "cross-check: a cigarette, not a phone"}
+
+  # --- a fall at home ------------------------------------------------------------------------
+  - {id: fall-describe, clip: home_fall.mp4, check: describe}
+  - {id: fall-fall, clip: home_fall.mp4, check: fall, box: [60, 120, 207, 206], at: 7, expect: confirmed}
+
+  # --- a fight -----------------------------------------------------------------------------------
+  - {id: fight-describe, clip: violence.mp4, check: describe}
+  - {id: fight-fight, clip: violence.mp4, check: fight, box: [403, 96, 1061, 689], at: 8, expect: confirmed}
+
+  # --- a staged shoplifting --------------------------------------------------------------------
+  - {id: theft-describe, clip: shoplifting_07.mp4, check: describe}
+  - {id: theft-concealment, clip: shoplifting_07.mp4, check: concealment, box: [98, 85, 530, 478], at: 7, expect: confirmed,
+     note: "item goes into a blue backpack"}
+
+  # --- a warehouse: forklift and a worker on foot ----------------------------------------
+  - {id: forklift-describe, clip: forklift_11s_720p.mp4, check: describe}
+  - {id: forklift-proximity, clip: forklift_11s_720p.mp4, check: forklift-proximity, at: 4, box: [456, 57, 893, 442],
+     expect: confirmed, note: "worker close to the forklift; distance judged by eye"}
+
+  # --- a workshop: hard hats on ------------------------------------------------------------
+  - {id: ppe-describe, clip: PPE_Part1.mp4, check: describe}
+  - {id: ppe-helmet, clip: PPE_Part1.mp4, check: helmet, box: [602, 390, 1058, 1007], at: 2, expect: rejected,
+     note: "orange hard hat on: the alert is a false alarm (0.1.0 first runs said confirmed)"}

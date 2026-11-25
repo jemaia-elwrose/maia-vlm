@@ -1,0 +1,60 @@
+id: fight
+version: 1
+title: Are people fighting?
+applies_to:
+  labels:
+  - person
+  - fight
+  - violence
+review_only: true
+frames:
+  count: 6
+  window_s:
+  - -2.0
+  - 2.0
+  crop: full
+prompt: |
+  These {n_frames} frames cover {span_s} s around {subject}.
+  Are people fighting: hitting, kicking, pushing hard or grappling with each other?
+  - confirmed: a physical fight is visible.
+  - rejected: people are close together, hugging, playing, working or walking past each other, but not fighting.
+  - unclear: the images do not show it clearly.
+  Do not describe anyone's appearance; say only what the people do.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    people_involved:
+      type: integer
+      minimum: 0
+      maximum: 20
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4

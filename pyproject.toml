@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "maia-vlm"
+version = "0.1.0"
+description = "Check detector events with a vision-language model: keyframes in, validated JSON verdicts out, measured against the detector alone."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Jema" }]
+keywords = ["vlm", "vision-language-model", "video-analytics", "computer-vision", "qwen-vl", "vllm", "ollama"]
+dependencies = [
+    "av>=12",           # decodes clips (FFmpeg wheels on Linux, macOS, Windows)
+    "pillow>=10",
+    "numpy>=1.24",
+    "pydantic>=2.7",
+    "pyyaml>=6",
+    "jsonschema>=4.21",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff==0.17.5"]
+
+[project.scripts]
+maia-vlm = "maia_vlm.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/maia_vlm"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"checks" = "maia_vlm/builtin_checks"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B904"]

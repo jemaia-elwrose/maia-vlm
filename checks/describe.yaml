@@ -1,0 +1,37 @@
+id: describe
+version: 2
+title: One-line description of what happens
+applies_to:
+  labels:
+  - '*'
+frames:
+  count: 4
+  window_s:
+  - -2.0
+  - 2.0
+  crop: full
+prompt: |
+  These frames come from camera {camera} around {time}. Focus on {subject}.
+  In one or two plain sentences an operator can act on, say what is happening: what the people or vehicles in view are doing, roughly how many there are, and anything unusual or unsafe.
+  Mention only what you can see. Do not guess identities, ages or intentions, or what happens off camera.
+  - confirmed: the images show clearly enough what happens.
+  - unclear: they are too dark, small or blurred to tell.
+  - rejected: there is nothing of what the detector reported in view.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 240
+    activity:
+      type: string
+      maxLength: 60

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+# media for eval sets is downloaded, never committed (see sets/*/SOURCES.md)
+/sets/*/media/
+*.mp4
+*.mov
+*.mkv
+!/examples/*.mp4

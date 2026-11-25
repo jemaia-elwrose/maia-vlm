@@ -1,0 +1,73 @@
+id: concealment
+version: 2
+title: Did the person hide an item?
+applies_to:
+  labels:
+  - person
+review_only: true
+frames:
+  count: 6
+  window_s:
+  - -3.0
+  - 2.0
+  crop: both
+  context: 0.6
+prompt: |
+  Image 1 shows the whole scene; the others are close-ups over {span_s} s of {subject} in a shop.
+  Did the person put an item into a bag, a pocket or their clothing (instead of a basket or trolley, or keeping it in hand)?
+  - confirmed: an item goes into a bag, pocket or clothing in these images.
+  - rejected: items stay in hand, go into a basket or trolley, or back on the shelf.
+  - unclear: the hands are not visible enough to tell.
+  This is a prompt for a person to review the clip, not an accusation: describe only movements of hands and items.
+answer:
+  type: object
+  required:
+  - item_destination
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    item_destination:
+      enum:
+      - bag
+      - pocket_or_clothing
+      - basket_or_trolley
+      - shelf
+      - hand
+      - not_visible
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4
+verdict_from:
+  field: item_destination
+  map:
+    bag: confirmed
+    pocket_or_clothing: confirmed
+    basket_or_trolley: rejected
+    shelf: rejected
+    hand: rejected
+    not_visible: unclear

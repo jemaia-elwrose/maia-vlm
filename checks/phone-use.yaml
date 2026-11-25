@@ -1,0 +1,69 @@
+id: phone-use
+version: 2
+title: Is the person using a phone?
+applies_to:
+  labels:
+  - person
+  - phone
+frames:
+  count: 3
+  window_s:
+  - -1.5
+  - 1.5
+  crop: subject
+  context: 0.5
+prompt: |
+  These are close-ups of {subject}, a little over {span_s} s.
+  Is the person using a mobile phone: holding it to the ear, looking at its screen, or typing on it?
+  - confirmed: they are using a phone in at least two of the images.
+  - rejected: they are not (hands empty, or holding something else such as a scanner, a radio or a tool).
+  - unclear: the hands and face are not visible enough.
+  The description says what is in their hands.
+answer:
+  type: object
+  required:
+  - phone_use
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    phone_use:
+      enum:
+      - call
+      - screen
+      - none
+      - not_visible
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4
+verdict_from:
+  field: phone_use
+  map:
+    call: confirmed
+    screen: confirmed
+    none: rejected
+    not_visible: unclear

@@ -1,0 +1,58 @@
+id: fall
+version: 1
+title: Did the person fall, and are they still down?
+applies_to:
+  labels:
+  - person
+  - fall
+review_only: true
+frames:
+  count: 6
+  window_s:
+  - -2.0
+  - 3.0
+  crop: full
+  max_side: 448
+prompt: |
+  These {n_frames} frames cover {span_s} s around a possible fall of {subject}.
+  Did the person fall (an uncontrolled drop to the floor), and are they still on the floor in the last image?
+  - confirmed: they fell and are still down in the last image.
+  - rejected: no fall; for example they sat, knelt, bent down, lay down on purpose, or got up again normally.
+  - unclear: the images do not show it clearly.
+  The description says what happened, in order.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    still_down:
+      type: boolean
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4

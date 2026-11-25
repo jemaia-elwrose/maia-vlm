@@ -1,0 +1,56 @@
+id: smoking
+version: 1
+title: Is the person smoking?
+applies_to:
+  labels:
+  - person
+  - cigarette
+  - smoke
+frames:
+  count: 4
+  window_s:
+  - -2.0
+  - 2.0
+  crop: subject
+  context: 0.5
+prompt: |
+  These are close-ups of {subject} over {span_s} s.
+  Is the person smoking (a cigarette, cigar or vape held to the mouth, or held lit in the hand)?
+  - confirmed: smoking is visible in at least one image.
+  - rejected: no smoking; for example eating, drinking, or a hand near the face holding nothing.
+  - unclear: the face and hands are not visible enough.
+  The description says what you see near the mouth and hands.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4

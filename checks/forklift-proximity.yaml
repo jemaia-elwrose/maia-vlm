@@ -1,0 +1,57 @@
+id: forklift-proximity
+version: 1
+title: Is a person on foot too close to a moving forklift?
+applies_to:
+  labels:
+  - forklift
+  - person
+frames:
+  count: 3
+  window_s:
+  - -1.0
+  - 1.0
+  crop: full
+  max_side: 640
+prompt: |
+  These frames from a warehouse camera cover {span_s} s. The detector reported {subject}.
+  Is a person on foot within about two metres of a forklift that is moving or has its forks raised?
+  - confirmed: yes, in at least one image.
+  - rejected: no person on foot is that close, or the forklift is parked with forks down and nobody on it.
+  - unclear: distances or movement cannot be judged from these images.
+  The description says where the person is relative to the forklift.
+answer:
+  type: object
+  required:
+  - verdict
+  - description
+  additionalProperties: false
+  properties:
+    verdict:
+      enum:
+      - confirmed
+      - rejected
+      - unclear
+    description:
+      type: string
+      maxLength: 200
+    forklift_moving:
+      type: boolean
+    evidence:
+      type: array
+      maxItems: 1
+      items:
+        type: object
+        required:
+        - image
+        - box
+        additionalProperties: false
+        properties:
+          image:
+            type: integer
+            minimum: 1
+          box:
+            type: array
+            items:
+              type: number
+            minItems: 4
+            maxItems: 4
