@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maia-vlm"
-version = "0.1.0"
+version = "0.1.1"
 description = "Check detector events with a vision-language model: keyframes in, validated JSON verdicts out, measured against the detector alone."
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,10 +22,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff==0.17.5"]
+# maia-vlm serve: follow maia-gateway's events, frames by reference from its rings
+live = ["redis>=5", "maia-ring @ git+https://github.com/jemaia-elwrose/maia-ring@v0.1.3"]
+dev = ["pytest>=8", "ruff==0.17.5", "redis>=5", "maia-ring @ git+https://github.com/jemaia-elwrose/maia-ring@v0.1.3"]
 
 [project.scripts]
 maia-vlm = "maia_vlm.cli:main"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/maia_vlm"]

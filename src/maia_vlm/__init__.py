@@ -14,7 +14,7 @@ from .checks import load_all as load_checks
 from .frames import Event, Frame, read_clip
 from .verify import Verdict, verify, verify_clip
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "Backend",

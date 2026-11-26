@@ -120,6 +120,45 @@ answer:                  # JSON Schema; validated, never trusted
 Prompts may use `{subject}`, `{label}`, `{camera}`, `{time}`, `{n_frames}`, `{span_s}` and
 `{zone}`, all filled from the event; nothing from the image is pasted into a prompt.
 
+## Live: checking maia-gateway's events
+
+`maia-vlm serve` follows the gateway's `events` stream. For each event, a rules file says which
+checks run; each check waits for its frame window to pass, reads the frames around the event
+from the camera's ring by reference (falling back to the event's clip if they were already
+overwritten), and posts its verdict to the clip:
+
+```bash
+pip install -e ".[live]"
+maia-vlm serve --rules rules.yaml --redis redis://localhost:6379/0 --gateway http://localhost:8080
+```
+
+```yaml
+# rules.yaml: a camera or label may be a glob; matching rules add up
+rules:
+  - {camera: "*", label: person, checks: [person-present, describe]}
+  - {camera: "ppe-*", label: person, checks: [helmet]}
+```
+
+```
+14:02:11 gate-1 person -> person-present: confirmed (ok, 2.4 s, frames from ring)
+    A man in a dark jacket walks towards the gate.
+```
+
+The event's box (`meta.box`, in pixels of the ring frame) is what the check looks at:
+maia-gateway's `examples/detect_from_bus.py` sends YOLO's most confident box. Verdicts annotate
+the clip (`GET /clips/<camera>/<clip>` shows them); they never remove an alert. Services in one
+consumer group (`--group`) split the events; when the model falls behind, the oldest queued
+checks are answered `no_verdict` (overloaded), so detection never waits.
+
+**One-command live test**, logs kept: `scripts/live-test.sh` checks that the gateway, the camera
+and the VLM server are up, starts maia-infer with a YOLO worker if none is running, runs
+`maia-vlm serve` and the detector for a while, waits for the verdicts and the clips, and writes
+a summary, every log, and the images each check saw to `logs/live-<time>-<camera>/`:
+
+```bash
+CAMERA=demo-video DURATION=60 MAIA_VLM_URL=http://localhost:8001/v1 GATEWAY_DIR=../maia-gateway scripts/live-test.sh
+```
+
 ## Running a set of cases
 
 `maia-vlm run` takes a YAML list of cases (clip, check, box, time, expected verdict), runs them
@@ -183,10 +222,7 @@ example from a maia-ring ring.
 
 ## Roadmap
 
-- **0.1.1** eval harness: precision and recall of alerts with and without the VLM, JSON
-  validity, ungrounded answers, latency per event; public datasets; Ollama vs mlx-vlm vs vLLM.
-- **0.1.2** live: follow maia-gateway's events, frames by reference from the ring, verdicts
-  written back to the event and its clip; a maia-infer worker mode.
+- **0.1.2** eval: broader public sets with deliberate negatives; Ollama vs mlx-vlm vs vLLM.
 - **0.2** fine-tuning: a QLoRA recipe for a 2-4B model, measured with the same harness.
 
 ## Development

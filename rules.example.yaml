@@ -1,0 +1,6 @@
+# Which checks maia-vlm serve runs on which gateway events. A camera or label may be a glob.
+# Every matching rule adds its checks; each check runs once per event.
+rules:
+  - {camera: "*", label: person, checks: [person-present, describe]}
+  - {camera: "ppe-*", label: person, checks: [helmet]}
+  - {camera: "*", label: fall, checks: [fall]}

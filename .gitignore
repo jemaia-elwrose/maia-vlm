@@ -14,4 +14,4 @@ build/
 *.mov
 *.mkv
 !/examples/*.mp4
-/results/*/
+/logs/

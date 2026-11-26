@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+- `maia-vlm serve --rules rules.yaml`: follows maia-gateway's `events` stream (consumer group),
+  runs the checks the rules give, frames by reference from the camera's ring (BGR/gray
+  converted) or, once overwritten, from the event's clip (box scaled to the clip), and posts
+  each verdict to the clip. A bounded queue answers the oldest checks `no_verdict`
+  (overloaded) when the model falls behind. `--log` (JSONL), `--save-images`, `--workers`.
+- `scripts/live-test.sh`: the whole chain in one command, every log kept, a summary at the end.
+- Needs maia-gateway 0.1.5 (events stream, verdicts on clips). `pip install "maia-vlm[live]"`.
+
 ## 0.1.0
 - Checks as YAML: question, frames and crops, JSON Schema of the answer; nine examples
   (person-present, helmet, describe, phone-use, smoking, fall, fight, concealment,

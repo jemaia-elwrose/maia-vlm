@@ -90,6 +90,39 @@ def cmd_run(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(a: argparse.Namespace) -> int:
+    import logging
+    import os
+    import signal
+
+    from .live import Rules, Service
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    def _stop(*_):  # a script's kill (SIGTERM) ends the service like Ctrl+C: summary included
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _stop)
+    rules = Rules.load(a.rules)
+    service = Service(
+        rules, _backend(a), a.redis, a.gateway, workers=a.workers, max_pending=a.max_pending,
+        sample_fps=a.fps, group=a.group, consumer=a.consumer, check_dirs=tuple(a.dir),
+        api_key=os.getenv("MAIA_API_KEY", ""), log_path=a.log, save_dir=a.save_images,
+    )  # fmt: skip
+    print(
+        f"maia-vlm {__version__}: following events on {a.redis}, verdicts to {a.gateway}, model {service.backend.name}"
+    )
+    for r in rules.rules:
+        print(f"  camera {r.camera}, label {r.label}: {', '.join(r.checks)}")
+    stats = service.run()
+    print(f"\nmaia-vlm {__version__} stopped")
+    sources = f"{stats.from_ring} from the ring, {stats.from_clip} from clips"
+    print(f"\n{stats.events} events, {stats.checks} checks ({sources}), verdicts {stats.verdicts}")
+    print(f"overloaded {stats.overloaded}, errors {stats.errors}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="maia-vlm", description="Check detector events with a vision-language model.")
     ap.add_argument("--version", action="version", version=f"maia-vlm {__version__}")
@@ -129,6 +162,23 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--save-images", action="store_true", help="also write each case's images, boxes drawn")
     _backend_args(p)
     p.set_defaults(fn=cmd_run)
+
+    p = sub.add_parser("serve", help="follow maia-gateway's events, check them, post the verdicts to their clips")
+    p.add_argument("--rules", type=Path, required=True, help="which checks run on which events (rules.yaml)")
+    p.add_argument("--redis", default="redis://localhost:6379/0")
+    p.add_argument(
+        "--gateway", default="http://localhost:8080", help="maia-gateway's API (MAIA_API_KEY if it needs one)"
+    )
+    p.add_argument("--workers", type=int, default=1, help="checks run at once (vLLM batches them; Ollama: keep 1)")
+    p.add_argument("--max-pending", type=int, default=32, help="queued checks before the oldest are dropped")
+    p.add_argument("--fps", type=float, help="thin the frames to this rate first")
+    p.add_argument("--group", default="maia-vlm", help="consumer group: services in one group split the events")
+    p.add_argument("--consumer", default="vlm-1", help="this service's name in the group")
+    p.add_argument("--log", type=Path, help="also append every verdict to this JSONL file")
+    p.add_argument("--save-images", type=Path, metavar="DIR", help="write each check's images to DIR/<clip>/<check>/")
+    p.add_argument("--dir", action="append", default=[], help="another folder of check YAML files")
+    _backend_args(p)
+    p.set_defaults(fn=cmd_serve)
 
     a = ap.parse_args(argv)
     try:
