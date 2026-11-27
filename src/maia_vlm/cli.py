@@ -89,6 +89,7 @@ def cmd_run(a: argparse.Namespace) -> int:
         tuple(a.dir),
         save_images=a.save_images,
         infer=a.infer,
+        infer_service=a.infer_service,
         boxes_from=a.boxes_from,
     )
     rows = [json.loads(line) for line in path.read_text().splitlines()]
@@ -171,6 +172,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--dir", action="append", default=[], help="another folder of check YAML files")
     p.add_argument("--save-images", action="store_true", help="also write each case's images, boxes drawn")
     p.add_argument("--infer", help="maia-infer endpoint for cases with box: auto (e.g. tcp://localhost:5555)")
+    p.add_argument("--infer-service", default="rfdetr", help="its detection worker (default rfdetr; or yolo)")
     p.add_argument("--boxes-from", type=Path, help="reuse the time and box of each case from an earlier results .jsonl")
     _backend_args(p)
     p.set_defaults(fn=cmd_run)

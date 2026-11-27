@@ -48,6 +48,14 @@ Every reply on the M4 was valid JSON even without an enforced schema. Prompt tok
 same on both servers (the same processor and image sizes); Ollama used about six times as
 many for the same images, which is most of why it was slow.
 
+## Swapping the detector (T4, maia-vlm 0.1.3)
+
+The same set with `box: auto` boxes from maia-infer's RF-DETR (medium, Apache-2.0) instead
+of YOLO: **43 / 46** again. RF-DETR found the person in `fall-pos-04`, which YOLO missed (that
+case is now right), and `smoke-neg-05` turned wrong (a hand near the mouth read as smoking,
+the M4 run's mistake). The detector changes which person and box the VLM sees, not how well
+the checks do. RF-DETR medium ran at 37 ms per 640x360 frame (p50) on the T4.
+
 ## Tuning history (T4)
 
 The checks were tuned on this set, so these numbers flatter them; they are a development

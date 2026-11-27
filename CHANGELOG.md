@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+- `box: auto` boxes come from maia-infer's RF-DETR worker by default (Apache-2.0);
+  `maia-vlm run --infer-service yolo` keeps Ultralytics YOLO (AGPL-3.0), which gave the
+  published public-v1 boxes. `--boxes-from` reproduces those exactly with either.
+- `scripts/live-test.sh` starts an RF-DETR worker (`SERVICE=yolo` for YOLO); `[auto]` pins
+  maia-infer 0.5.0.
+
 ## 0.1.2 (2026-11-27)
 - public-v1 results ([sets/public-v1/RESULTS.md](sets/public-v1/RESULTS.md)): Tesla T4 + vLLM
   43/46, 22/23 events caught, 2 false alarms, 5.1 s p50; Apple M4 + mlx-vlm (8-bit) 41/46,

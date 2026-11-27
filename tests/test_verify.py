@@ -345,7 +345,7 @@ def test_box_auto_takes_the_detectors_box_and_records_it(server, backend, clip, 
     import maia_vlm.runner as runner
 
     class FakeDetector:
-        def __init__(self, endpoint):
+        def __init__(self, endpoint, service="rfdetr"):
             self.endpoint = endpoint
 
         def box(self, clip, at, label, mode="auto"):

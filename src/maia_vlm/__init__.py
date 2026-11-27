@@ -14,7 +14,7 @@ from .checks import load_all as load_checks
 from .frames import Event, Frame, read_clip
 from .verify import Verdict, verify, verify_clip
 
-__version__ = "0.1.2"  # pyproject.toml reads it from here
+__version__ = "0.1.3"  # pyproject.toml reads it from here
 
 __all__ = [
     "Backend",

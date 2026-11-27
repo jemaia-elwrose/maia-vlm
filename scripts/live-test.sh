@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Live test of the whole chain, with every log kept:
-#   camera (maia-gateway) -> YOLO (maia-infer, by reference) -> event -> maia-vlm -> verdict on the clip
+#   camera (maia-gateway) -> detector (maia-infer RF-DETR, by reference) -> event -> maia-vlm -> verdict on the clip
 #
 # What must already run:  maia-gateway (Docker or `maia-gateway serve`) with the camera playing,
 #                         and the VLM server (vLLM / Ollama) that MAIA_VLM_URL points at.
-# What this script starts: maia-infer broker + YOLO worker (unless one answers already),
+# What this script starts: maia-infer broker + $SERVICE worker (unless one answers already),
 #                          maia-vlm serve, and the detector (maia-gateway's examples/detect_from_bus.py).
-# One Python environment needs maia-vlm[live], maia-infer[yolo] and maia-gateway (see the README).
+# One Python environment needs maia-vlm[live], maia-infer[rfdetr] and maia-gateway (see the README).
 #
 #   scripts/live-test.sh                        # camera demo-video, 60 s of detection
 #   CAMERA=gate DURATION=120 scripts/live-test.sh
 #
 # Settings (environment): CAMERA, DURATION (s), COOLDOWN (s between events), RULES (a rules file;
 # default: person -> person-present + describe), GATEWAY_DIR (the maia-gateway repo, for the
-# detector), API, REDIS, INFER, MAIA_VLM_URL, MAIA_VLM_MODEL, FPS, SAVE_IMAGES=1, LOG_ROOT.
+# detector), API, REDIS, INFER, SERVICE (rfdetr | yolo), MAIA_VLM_URL, MAIA_VLM_MODEL, FPS, SAVE_IMAGES=1, LOG_ROOT.
 set -uo pipefail
 
 CAMERA=${CAMERA:-demo-video}
@@ -22,6 +22,7 @@ COOLDOWN=${COOLDOWN:-10}
 API=${API:-http://localhost:8080}
 REDIS=${REDIS:-redis://localhost:6379/0}
 INFER=${INFER:-tcp://localhost:5555}
+SERVICE=${SERVICE:-rfdetr}   # maia-infer detection worker: rfdetr (Apache-2.0) or yolo (AGPL-3.0)
 GATEWAY_DIR=${GATEWAY_DIR:-../maia-gateway}
 FPS=${FPS:-5}
 SAVE_IMAGES=${SAVE_IMAGES:-1}
@@ -59,7 +60,7 @@ for m in ("maia_vlm.live", "maia_gateway.bus"):
 print("python:", sys.executable)
 if missing:
     print("missing:", ", ".join(missing))
-    print('install: pip install -e "../maia-vlm[live]" -e "../maia-gateway" "maia-infer[yolo] @ git+https://github.com/jemaia-elwrose/maia-infer@v0.4.2"')
+    print('install: pip install -e "../maia-vlm[live]" -e "../maia-gateway" "maia-infer[rfdetr] @ git+https://github.com/jemaia-elwrose/maia-infer@v0.5.0"')
     sys.exit(1)
 EOF
 [ -f "$GATEWAY_DIR/examples/detect_from_bus.py" ] || fail "no detector at $GATEWAY_DIR/examples/detect_from_bus.py (set GATEWAY_DIR)"
@@ -71,19 +72,19 @@ grep -q "<- configured" "$RUN/vlm-ping.txt" || say "warning: $MAIA_VLM_MODEL is 
 say "preflight ok: gateway, camera running, VLM server up"
 
 # ---------------------------------------------------------------- 2. maia-infer (YOLO)
-if maia-infer ping --endpoint "$INFER" >/dev/null 2>&1 && maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q '"yolo"'; then
-    say "maia-infer already running with a yolo worker: using it"
+if maia-infer ping --endpoint "$INFER" >/dev/null 2>&1 && maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q "\"$SERVICE\""; then
+    say "maia-infer already running with a $SERVICE worker: using it"
 else
-    say "starting maia-infer broker + yolo worker (logs: infer-broker.log, infer-worker.log)"
+    say "starting maia-infer broker + $SERVICE worker (logs: infer-broker.log, infer-worker.log)"
     maia-infer broker >"$RUN/infer-broker.log" 2>&1 & PIDS+=($!)
     sleep 2
-    maia-infer worker yolo >"$RUN/infer-worker.log" 2>&1 & PIDS+=($!)
+    maia-infer worker "$SERVICE" >"$RUN/infer-worker.log" 2>&1 & PIDS+=($!)
     for _ in $(seq 1 90); do
-        maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q '"yolo"' && break
+        maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q "\"$SERVICE\"" && break
         sleep 1
     done
-    maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q '"yolo"' || fail "the yolo worker did not register (infer-worker.log)"
-    say "yolo worker ready"
+    maia-infer stats --endpoint "$INFER" 2>/dev/null | grep -q "\"$SERVICE\"" || fail "the $SERVICE worker did not register (infer-worker.log)"
+    say "$SERVICE worker ready"
 fi
 
 # ---------------------------------------------------------------- 3. maia-vlm serve
@@ -104,7 +105,7 @@ kill -0 $VLM_PID 2>/dev/null || fail "maia-vlm serve stopped at start (vlm.log)"
 # ---------------------------------------------------------------- 4. detection
 say "detecting for $DURATION s (log: detect.log); an event at most every $COOLDOWN s"
 "$TIMEOUT" --signal=INT "$DURATION" python "$GATEWAY_DIR/examples/detect_from_bus.py" --camera "$CAMERA" \
-    --label person --api "$API" --redis "$REDIS" --infer "$INFER" --cooldown "$COOLDOWN" >"$RUN/detect.log" 2>&1
+    --label person --api "$API" --redis "$REDIS" --infer "$INFER" --service "$SERVICE" --cooldown "$COOLDOWN" >"$RUN/detect.log" 2>&1
 EVENTS=$(grep -c " -> clip " "$RUN/detect.log" || true)
 say "detection done: $EVENTS event(s)"
 

@@ -68,15 +68,15 @@ def load_cases(path: str | Path, media: str | Path | None = None) -> tuple[list[
 
 
 class Detector:
-    """Boxes for ``box: auto`` / ``auto-group``, from a maia-infer worker (YOLO: BGR input, COCO
-    names). ``auto``: the largest detection of the label, the main subject of a test clip (the
+    """Boxes for ``box: auto`` / ``auto-group``, from a maia-infer detection worker (RF-DETR by
+    default; BGR input, COCO names). ``auto``: the largest detection of the label, the main subject of a test clip (the
     most confident one is often a bystander, or a false positive on furniture). ``auto-group``:
     one box around all of them, for checks about a group (a fight). When the case's frame has
     none, the frames up to 0.8 s around it are tried, nearest first."""
 
     OFFSETS = (0.0, -0.4, 0.4, -0.8, 0.8)
 
-    def __init__(self, endpoint: str, service: str = "yolo", conf: float = 0.3):
+    def __init__(self, endpoint: str, service: str = "rfdetr", conf: float = 0.3):
         from maia_infer import Client  # optional: only sets with box: auto need it
 
         self.client, self.service, self.conf = Client(endpoint, timeout_ms=20000), service, conf
@@ -225,6 +225,7 @@ def run(
     echo=print,
     save_images: bool = False,
     infer: str | None = None,
+    infer_service: str = "rfdetr",
     boxes_from: str | Path | None = None,
 ) -> tuple[Path, dict]:
     """Run every case (or those whose id starts with one of ``only``), write
@@ -249,7 +250,7 @@ def run(
             raise ValueError(f"{boxes_from} has no result for: {', '.join(absent)}")
         cases = [c.model_copy(update={"at": reused[c.id]["at"], "box": _box(reused[c.id]["box"])}) for c in cases]
     auto = any(c.box in ("auto", "auto-group") for c in cases)
-    detector = Detector(infer) if infer and auto else None
+    detector = Detector(infer, infer_service) if infer and auto else None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     slug = "".join(ch if ch.isalnum() else "-" for ch in backend.model).strip("-").lower()
     out = Path(out_dir)
