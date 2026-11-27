@@ -1,5 +1,5 @@
 id: helmet
-version: 2
+version: 4
 title: Is the person wearing a hard hat?
 applies_to:
   labels:
@@ -16,24 +16,29 @@ frames:
 prompt: |
   These are close-ups of {subject}, at a work site or on a vehicle.
   The alert says this person has NO hard hat (safety helmet) on.
-  First set head_covering to what is on their head: hard_hat, cap_or_hood, none, or not_visible.
-  A cap, hood, scarf or hair net is not a hard hat. A hard hat held in the hand or hanging on a belt does not count.
-  Then judge the alert:
-  - confirmed: no hard hat on the head (the alert is right).
-  - rejected: a hard hat is on the head (a false alarm).
-  - unclear: the head is not visible clearly enough in any image.
+  First set hard_hat: is a hard hat (a rigid helmet shell, any colour) on their head?
+  - yes: a hard hat is on the head, even if a hood, cap or scarf is worn under it.
+  - no: no hard hat on the head. A cap, hood, scarf or hair net on its own is not a hard hat, and neither is one held in the hand or hanging on a belt.
+  - not_visible: the head is not visible clearly enough in any image.
+  Then set head_covering to anything else on their head: cap_or_hood, none, or not_visible.
+  Then judge the alert: confirmed if there is no hard hat (the alert is right), rejected if there is one (a false alarm), unclear if not visible.
   The description names what is on the person's head.
 answer:
   type: object
   required:
+  - hard_hat
   - head_covering
   - verdict
   - description
   additionalProperties: false
   properties:
+    hard_hat:
+      enum:
+      - 'yes'
+      - 'no'
+      - not_visible
     head_covering:
       enum:
-      - hard_hat
       - cap_or_hood
       - none
       - not_visible
@@ -65,9 +70,8 @@ answer:
             minItems: 4
             maxItems: 4
 verdict_from:
-  field: head_covering
+  field: hard_hat
   map:
-    none: confirmed
-    cap_or_hood: confirmed
-    hard_hat: rejected
+    'yes': rejected
+    'no': confirmed
     not_visible: unclear

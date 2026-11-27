@@ -84,3 +84,23 @@ def test_the_shipped_test_cases_load():
     known = checks.load_all()
     assert len(cases) >= 20 and all(c.check in known for c in cases)
     assert any(c.expect == "rejected" for c in cases)
+
+
+def test_the_public_set_loads_and_is_balanced():
+    from maia_vlm.runner import load_cases
+
+    cases, _ = load_cases(checks.builtin_dir().parent / "sets" / "public-v1" / "cases.yaml")
+    known = checks.load_all()
+    assert all(c.check in known for c in cases)
+    assert all(c.box in ("auto", "auto-group") or isinstance(c.box, tuple) for c in cases)  # a box for every case
+    for check in {c.check for c in cases}:
+        mine = [c.expect for c in cases if c.check == check]
+        assert mine.count("confirmed") == mine.count("rejected"), check
+
+
+
+def test_version_is_written_once():
+    from pathlib import Path
+
+    text = (Path(__file__).parents[1] / "pyproject.toml").read_text()
+    assert 'dynamic = ["version"]' in text and 'path = "src/maia_vlm/__init__.py"' in text

@@ -15,3 +15,6 @@ build/
 *.mkv
 !/examples/*.mp4
 /logs/
+# run outputs stay local; published runs go in sets/<set>/results/ (.jsonl + .md only)
+/results/
+/sets/*/results/*/

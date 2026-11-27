@@ -34,7 +34,7 @@ def test_the_prompt_carries_the_box_in_the_models_format(server, backend, clip):
 def test_invalid_answer_is_repaired_once(server, backend, clip):
     server.replies = [
         "Sure! The person has no helmet.",
-        '```json\n{"verdict": "confirmed", "description": "Bare head, no hard hat.", "head_covering": "none"}\n```',
+        '```json\n{"verdict": "confirmed", "description": "Bare head, no hard hat.", "hard_hat": "no", "head_covering": "none"}\n```',
     ]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert v.verdict == "confirmed" and v.status == "repaired" and v.calls == 2
@@ -78,9 +78,32 @@ def test_ungrounded_evidence_lowers_the_verdict_to_unclear(server, backend, clip
 
 
 def test_review_only_checks_flag_a_confirmation_for_review(server, backend, clip):
-    server.replies = [{"verdict": "confirmed", "description": "Fell and stays down.", "still_down": True}]
+    server.replies = [{"postures": ["standing", "falling", "lying"], "landed_on": "floor", "how_down": "fell", "verdict": "confirmed",
+                       "description": "Fell and stays down.", "still_down": True}]  # fmt: skip
     v = verify_clip(clip, PERSON, find_check("fall"), backend)
     assert v.verdict == "confirmed" and v.needs_review
+
+
+def test_lying_down_on_purpose_is_not_a_fall_even_if_the_model_says_confirmed(server, backend, clip):
+    server.replies = [{"postures": ["standing", "sitting", "lying"], "landed_on": "floor", "how_down": "lowered_self", "verdict": "confirmed",
+                       "description": "Lies down on the mat."}]  # fmt: skip
+    v = verify_clip(clip, PERSON, find_check("fall"), backend)
+    assert (v.verdict, v.status) == ("rejected", "inconsistent")
+    assert "postures" in server.prompt() and len(server.images()) == 8
+
+
+def test_a_fall_onto_a_bed_is_not_confirmed_even_if_the_model_says_it_fell(server, backend, clip):
+    server.replies = [{"postures": ["standing", "falling", "lying"], "landed_on": "bed_or_furniture", "how_down": "fell",
+                       "verdict": "confirmed", "description": "Falls onto the bed."}]  # fmt: skip
+    v = verify_clip(clip, PERSON, find_check("fall"), backend)
+    assert (v.verdict, v.status) == ("rejected", "inconsistent") and "landed_on='bed_or_furniture'" in v.reason
+
+
+def test_a_hard_hat_over_a_hood_rejects_the_alert(server, backend, clip):
+    server.replies = [{"hard_hat": "yes", "head_covering": "cap_or_hood", "verdict": "confirmed",
+                       "description": "Hood with a hard hat over it."}]  # fmt: skip
+    v = verify_clip(clip, PERSON, find_check("helmet"), backend)
+    assert (v.verdict, v.status) == ("rejected", "inconsistent")
 
 
 def test_vllm_gets_the_schema_its_own_way(server, backend, clip):
@@ -99,7 +122,7 @@ def test_parse_accepts_common_wrappings(text):
 
 
 def test_cli_check_prints_the_verdict(server, backend, clip, monkeypatch, capsys):
-    server.replies = [{"verdict": "rejected", "description": "A hard hat is on.", "head_covering": "hard_hat"}]
+    server.replies = [{"verdict": "rejected", "description": "A hard hat is on.", "hard_hat": "yes", "head_covering": "none"}]
     monkeypatch.setattr("maia_vlm.cli._backend", lambda a: backend)
     with pytest.raises(SystemExit) as done:
         main(["check", str(clip), "--check", "helmet", "--box", "300,120,380,220", "--at", "2"])
@@ -161,7 +184,7 @@ def test_evidence_is_held_to_the_box_on_the_event_image_only(server, backend, cl
     # helmet: 3 close-ups, the event one is image 2; the subject may have moved in images 1 and 3
     evidence = [{"image": image, "box": box}]
     server.replies = [
-        {"head_covering": "none", "verdict": "confirmed", "description": "Bare head.", "evidence": evidence}
+        {"hard_hat": "no", "head_covering": "none", "verdict": "confirmed", "description": "Bare head.", "evidence": evidence}
     ]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert v.status == status
@@ -172,18 +195,18 @@ def test_evidence_is_held_to_the_box_on_the_event_image_only(server, backend, cl
 @pytest.mark.parametrize(
     "covering, said, final, status",
     [
-        ("hard_hat", "confirmed", "rejected", "inconsistent"),  # the 0.1.0 PPE case: trust the field
-        ("none", "rejected", "unclear", "inconsistent"),  # a contradiction never becomes a confirmation
-        ("none", "confirmed", "confirmed", "ok"),
+        ("yes", "confirmed", "rejected", "inconsistent"),  # the 0.1.0 PPE case: trust the field
+        ("no", "rejected", "unclear", "inconsistent"),  # a contradiction never becomes a confirmation
+        ("no", "confirmed", "confirmed", "ok"),
         ("not_visible", "unclear", "unclear", "ok"),
     ],
 )
 def test_verdict_follows_the_specific_answer(server, backend, clip, covering, said, final, status):
-    server.replies = [{"head_covering": covering, "verdict": said, "description": "x"}]
+    server.replies = [{"hard_hat": covering, "head_covering": "none", "verdict": said, "description": "x"}]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert (v.verdict, v.status) == (final, status)
     if status == "inconsistent":
-        assert "contradicts head_covering" in v.reason
+        assert "contradicts hard_hat" in v.reason
 
 
 def test_describe_without_a_box_looks_at_the_whole_scene(server, backend, clip):
@@ -204,7 +227,7 @@ def test_runner_saves_every_verdict_and_a_summary(server, backend, clip, tmp_pat
         "  - {id: b-describe, clip: c.mp4, check: describe}\n"
     )
     server.replies = [
-        {"head_covering": "hard_hat", "verdict": "confirmed", "description": "Hard hat on."},
+        {"hard_hat": "yes", "head_covering": "none", "verdict": "confirmed", "description": "Hard hat on."},
         {"verdict": "confirmed", "description": "A square moves right.", "activity": "moving"},
     ]
     path, summary = run(cases, backend, tmp_path / "results", echo=lambda *_: None, save_images=True)
@@ -213,6 +236,21 @@ def test_runner_saves_every_verdict_and_a_summary(server, backend, clip, tmp_pat
     assert summary["accuracy"] == 1.0 and summary["statuses"] == {"inconsistent": 1, "ok": 1}
     assert path.with_suffix(".md").read_text().count("a-helmet") == 1
     assert (path.with_suffix("") / "a-helmet" / "verdict.json").is_file()
+
+
+def test_runner_reuses_boxes_from_an_earlier_run(server, backend, clip, tmp_path):
+    from maia_vlm.runner import run
+
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media" / "c.mp4").write_bytes(clip.read_bytes())
+    cases = tmp_path / "cases.yaml"
+    cases.write_text("cases:\n  - {id: a, clip: c.mp4, check: helmet, box: auto, at: 1, expect: confirmed}\n")
+    earlier = tmp_path / "earlier.jsonl"
+    earlier.write_text(json.dumps({"case": "a", "at": 2.0, "box": [300, 120, 380, 220], "box_from": "auto"}) + "\n")
+    server.replies = [{"hard_hat": "no", "head_covering": "none", "verdict": "confirmed", "description": "Bare head."}]
+    path, _ = run(cases, backend, tmp_path / "r", echo=lambda *_: None, boxes_from=earlier)  # no --infer needed
+    row = json.loads(path.read_text())
+    assert (row["at"], row["box"], row["box_from"]) == (2.0, [300, 120, 380, 220], "auto (reused from earlier.jsonl)")
 
 
 def test_runner_names_missing_clips(backend, tmp_path):
@@ -234,7 +272,7 @@ def test_a_timeout_is_no_verdict_with_the_time_spent(server, backend, clip):
 
 
 def test_save_images_draws_the_boxes_on_copies(server, backend, clip, tmp_path):
-    server.replies = [{"head_covering": "none", "verdict": "confirmed", "description": "Bare head.",
+    server.replies = [{"hard_hat": "no", "head_covering": "none", "verdict": "confirmed", "description": "Bare head.",
                        "evidence": [{"image": 2, "box": [400, 400, 600, 600]}]}]  # fmt: skip
     verify_clip(clip, PERSON, find_check("helmet"), backend, save_to=tmp_path / "shots")
     names = sorted(p.name for p in (tmp_path / "shots").iterdir())
@@ -255,3 +293,57 @@ def test_summary_counts_alerts_the_way_an_operator_would():
     assert [mark(r) for r in rows] == ["ok", "WRONG", "no alert", "WRONG"]
     a = summarize(rows)["alerts"]
     assert (a["caught"], a["missed"], a["false_alarms"], a["recall"], a["false_alarm_rate"]) == (1, 1, 1, 0.5, 0.5)
+
+
+def test_box_auto_takes_the_detectors_box_and_records_it(server, backend, clip, tmp_path, monkeypatch):
+    import maia_vlm.runner as runner
+
+    class FakeDetector:
+        def __init__(self, endpoint):
+            self.endpoint = endpoint
+
+        def box(self, clip, at, label, mode="auto"):
+            if label != "person":
+                return None
+            return (300.0, 120.0, 380.0, 220.0) if mode == "auto" else (100.0, 50.0, 600.0, 350.0)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(runner, "Detector", FakeDetector)
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media" / "c.mp4").write_bytes(clip.read_bytes())
+    cases = tmp_path / "cases.yaml"
+    cases.write_text(
+        "defaults: {box: auto}\n"
+        "cases:\n"
+        "  - {id: a, clip: c.mp4, check: person-present, expect: confirmed}\n"
+        "  - {id: b, clip: c.mp4, check: person-present, label: dog, expect: rejected}\n"
+        "  - {id: c, clip: c.mp4, check: fight, box: auto-group, expect: confirmed}\n"
+        "  - {id: d, clip: c.mp4, check: fight, label: dog, expect: rejected}\n"
+    )
+    server.replies = [
+        {"verdict": "confirmed", "description": "A person.", "evidence": []},
+        {"verdict": "confirmed", "description": "A fight.", "people_involved": 2, "evidence": []},
+        {"verdict": "rejected", "description": "Nobody fights.", "people_involved": 0, "evidence": []},
+    ]
+    path, summary = runner.run(cases, backend, tmp_path / "r", echo=lambda *_: None, infer="tcp://x:5555")
+    a, b, c, d = [json.loads(line) for line in path.read_text().splitlines()]
+    assert c["box"] == [100.0, 50.0, 600.0, 350.0] and c["box_from"] == "auto-group"
+    # a whole-frame check runs on the scene when no box is found; a crop check cannot
+    assert d["verdict"] == "rejected" and d["box"] is None and d["box_from"] == "auto: none found, whole scene"
+    assert a["box"] == [300.0, 120.0, 380.0, 220.0] and a["box_from"] == "auto" and a["at"] == 2.0  # the middle
+    assert "box [469, 333, 594, 611]" in server.prompt(0)
+    assert b["verdict"] == "no_verdict" and "found no dog" in b["reason"] and "crops around it" in b["reason"]
+    assert summary["alerts"]["caught"] == 2
+
+
+def test_box_auto_needs_a_detector(backend, clip, tmp_path):
+    from maia_vlm.runner import run
+
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media" / "c.mp4").write_bytes(clip.read_bytes())
+    cases = tmp_path / "cases.yaml"
+    cases.write_text("cases:\n  - {id: a, clip: c.mp4, check: person-present, box: auto}\n")
+    with pytest.raises(ValueError, match="--infer"):
+        run(cases, backend, tmp_path / "r", echo=lambda *_: None)

@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.2 (2026-11-27)
+- public-v1 results ([sets/public-v1/RESULTS.md](sets/public-v1/RESULTS.md)): Tesla T4 + vLLM
+  43/46, 22/23 events caught, 2 false alarms, 5.1 s p50; Apple M4 + mlx-vlm (8-bit) 41/46,
+  10.5 s p50, same prompt tokens.
+- `box: auto` in case files: the box comes from a maia-infer YOLO worker at the case time
+  (`maia-vlm run --infer tcp://...`): the largest person, searched up to 0.8 s around the
+  moment; `auto-group` boxes everyone (fights). Whole-frame checks run without a box when none
+  is found. Each result records the box and time used.
+- `verdict_from` can list several fields: the verdict is confirmed only if every one of them
+  says confirmed.
+- `helmet` v4: asks `hard_hat` yes/no first, then what else is on the head; a hard hat worn
+  over a hood counts as a hard hat (public-v1 run 2: a hood under the hat read as "no hard hat").
+- `fall` v4: 8 frames 0.5 s apart; the model lists the person's posture per image, says where
+  they ended up (`landed_on`: floor, bed or furniture, never down) and how they got down
+  (`fell`, `lowered_self`, ...). Confirmed only if both say fall. Public-v1 runs 1 and 2:
+  sitting or lying down on a bed and crouching were confirmed as falls.
+- `sets/public-v1`: 46 cases over five checks, real events and close-call negatives, from
+  public datasets (Le2i, RLVS, Retail Shoplifting, HMDB51, PPE videos); clips not included.
+- `maia-vlm run` prints the reason under each `no_verdict`.
+- The version is written once, in `maia_vlm/__init__.py`; `pyproject.toml` reads it from there
+  (`--version` said 0.1.1 after installing 0.1.2).
+- `maia-vlm run --boxes-from <earlier .jsonl>`: reuses each case's time and box, so two
+  servers are compared on the same input without a detector.
+- `scripts/mlx-run.sh`: public-v1 on an mlx-vlm server (Apple Silicon), boxes reused from a
+  T4 run; logs, system info and results in `logs/mlx-<time>/`.
+- `scripts/prepare-clip.sh`: cuts a test clip with its moment in the middle.
+- CI: macOS 15 runners (GitHub retired macOS 14).
+
 ## 0.1.1
 - `maia-vlm serve --rules rules.yaml`: follows maia-gateway's `events` stream (consumer group),
   runs the checks the rules give, frames by reference from the camera's ring (BGR/gray

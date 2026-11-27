@@ -79,7 +79,8 @@ class Check(BaseModel):
     prompt: str
     answer: dict[str, Any]  # JSON Schema of the reply
     grounding: Grounding = Field(default_factory=Grounding)
-    verdict_from: VerdictFrom | None = None
+    # one field, or several: then the verdict is confirmed only if every field says so
+    verdict_from: VerdictFrom | list[VerdictFrom] | None = None
     temperature: float = Field(0.0, ge=0, le=2)
     max_tokens: int = Field(256, ge=16, le=4096)
     review_only: bool = False  # temporal or sensitive checks: a "confirmed" means "needs review"
@@ -108,16 +109,21 @@ class Check(BaseModel):
 
     @model_validator(mode="after")
     def _verdict_from(self) -> Check:
-        if self.verdict_from is None:
-            return self
-        prop = self.answer.get("properties", {}).get(self.verdict_from.field)
-        if not prop or "enum" not in prop:
-            raise ValueError(f"verdict_from.field '{self.verdict_from.field}' must be an enum in answer")
-        if self.verdict_from.field not in self.answer.get("required", []):
-            raise ValueError(f"verdict_from.field '{self.verdict_from.field}' must be required in answer")
-        if sorted(self.verdict_from.map) != sorted(prop["enum"]):
-            raise ValueError(f"verdict_from.map must give a verdict for each of {prop['enum']}")
+        for rule in self.verdict_rules:
+            prop = self.answer.get("properties", {}).get(rule.field)
+            if not prop or "enum" not in prop:
+                raise ValueError(f"verdict_from.field '{rule.field}' must be an enum in answer")
+            if rule.field not in self.answer.get("required", []):
+                raise ValueError(f"verdict_from.field '{rule.field}' must be required in answer")
+            if sorted(rule.map) != sorted(prop["enum"]):
+                raise ValueError(f"verdict_from.map must give a verdict for each of {prop['enum']}")
         return self
+
+    @property
+    def verdict_rules(self) -> list[VerdictFrom]:
+        if self.verdict_from is None:
+            return []
+        return self.verdict_from if isinstance(self.verdict_from, list) else [self.verdict_from]
 
     def render(self, **fields: Any) -> str:
         return self.prompt.format(**{k: fields.get(k, "") for k in PROMPT_FIELDS})

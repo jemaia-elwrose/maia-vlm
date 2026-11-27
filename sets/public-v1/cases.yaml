@@ -1,0 +1,61 @@
+# Public set v1: real events and close-call negatives for five checks, from public datasets,
+# Pexels stock footage and recorded test footage (see SOURCES.md).
+# Clips in media/ (git-ignored); 'at' is the moment of the event in each clip, as measured when
+# it was cut (scripts/prepare-clip.sh: moment - start). Boxes come from YOLO at that moment.
+#
+#   maia-vlm run sets/public-v1/cases.yaml --infer tcp://localhost:5555 --save-images
+media: media
+defaults: {fps: 5, box: auto, label: person}
+
+cases:
+  # --- fall
+  - {id: fall-pos-01, clip: fall-pos-01.mp4, check: fall, at: 5.0, expect: confirmed, note: "a fall"}
+  - {id: fall-pos-02, clip: fall-pos-02.mp4, check: fall, at: 5.0, expect: confirmed, note: "a fall"}
+  - {id: fall-pos-03, clip: fall-pos-03.mp4, check: fall, at: 5.0, expect: confirmed, note: "a fall"}
+  - {id: fall-pos-04, clip: fall-pos-04.mp4, check: fall, at: 5.0, expect: confirmed, note: "a fall"}
+  - {id: fall-pos-05, clip: fall-pos-05.mp4, check: fall, at: 5.0, expect: confirmed, note: "a fall (edge case)"}
+  - {id: fall-neg-01, clip: fall-neg-01.mp4, check: fall, at: 5.0, expect: rejected, note: "not fall: bending over"}
+  - {id: fall-neg-02, clip: fall-neg-02.mp4, check: fall, at: 4.0, expect: rejected, note: "not fall: bending over"}
+  - {id: fall-neg-03, clip: fall-neg-03.mp4, check: fall, at: 4.0, expect: rejected, note: "not fall: lying down"}
+  - {id: fall-neg-04, clip: fall-neg-04.mp4, check: fall, at: 4.0, expect: rejected, note: "not fall: sitting down"}
+  - {id: fall-neg-05, clip: fall-neg-05.mp4, check: fall, at: 3.5, expect: rejected, note: "not fall: sitting down"}
+  # --- fight
+  - {id: fight-pos-01, clip: fight-pos-01.mp4, check: fight, box: auto-group, at: 3.0, expect: confirmed, note: "a fight"}
+  - {id: fight-pos-02, clip: fight-pos-02.mp4, check: fight, box: auto-group, at: 1.5, expect: confirmed, note: "a fight"}
+  - {id: fight-pos-03, clip: fight-pos-03.mp4, check: fight, box: auto-group, at: 1.0, expect: confirmed, note: "a fight"}
+  - {id: fight-pos-04, clip: fight-pos-04.mp4, check: fight, box: auto-group, at: 2.0, expect: confirmed, note: "a fight"}
+  - {id: fight-pos-05, clip: fight-pos-05.mp4, check: fight, box: auto-group, at: 3.0, expect: confirmed, note: "a fight"}
+  - {id: fight-neg-01, clip: fight-neg-01.mp4, check: fight, box: auto-group, at: 1.5, expect: rejected, note: "not fight: clapping highfive"}
+  - {id: fight-neg-02, clip: fight-neg-02.mp4, check: fight, box: auto-group, at: 2.5, expect: rejected, note: "not fight: exulting dancing"}
+  - {id: fight-neg-03, clip: fight-neg-03.mp4, check: fight, box: auto-group, at: 1.0, expect: rejected, note: "not fight: gesticulating gathering"}
+  - {id: fight-neg-04, clip: fight-neg-04.mp4, check: fight, box: auto-group, at: 2.0, expect: rejected, note: "not fight: hugging"}
+  - {id: fight-neg-05, clip: fight-neg-05.mp4, check: fight, box: auto-group, at: 2.3, expect: rejected, note: "not fight: hugging clapping"}
+  # --- concealment
+  - {id: theft-pos-01, clip: theft-pos-01.mp4, check: concealment, at: 5.0, expect: confirmed, note: "an item into a bag or clothing"}
+  - {id: theft-pos-02, clip: theft-pos-02.mp4, check: concealment, at: 4.5, expect: confirmed, note: "an item into a bag or clothing"}
+  - {id: theft-pos-03, clip: theft-pos-03.mp4, check: concealment, at: 5.0, expect: confirmed, note: "an item into a bag or clothing"}
+  - {id: theft-pos-04, clip: theft-pos-04.mp4, check: concealment, at: 5.0, expect: confirmed, note: "an item into a bag or clothing"}
+  - {id: theft-pos-05, clip: theft-pos-05.mp4, check: concealment, at: 3.5, expect: confirmed, note: "an item into a bag or clothing"}
+  - {id: theft-neg-01, clip: theft-neg-01.mp4, check: concealment, at: 5.0, expect: rejected, note: "not concealment: no sl 1"}
+  - {id: theft-neg-02, clip: theft-neg-02.mp4, check: concealment, at: 4.5, expect: rejected, note: "not concealment: no sl 2"}
+  - {id: theft-neg-03, clip: theft-neg-03.mp4, check: concealment, at: 4.0, expect: rejected, note: "not concealment: no sl 3"}
+  - {id: theft-neg-04, clip: theft-neg-04.mp4, check: concealment, at: 5.0, expect: rejected, note: "not concealment: no sl 4"}
+  - {id: theft-neg-05, clip: theft-neg-05.mp4, check: concealment, at: 5.0, expect: rejected, note: "not concealment: no sl 5"}
+  # --- smoking
+  - {id: smoke-pos-01, clip: smoke-pos-01.mp4, check: smoking, at: 2.5, expect: confirmed, note: "smoking"}
+  - {id: smoke-pos-02, clip: smoke-pos-02.mp4, check: smoking, at: 5.0, expect: confirmed, note: "smoking"}
+  - {id: smoke-pos-03, clip: smoke-pos-03.mp4, check: smoking, at: 3.5, expect: confirmed, note: "smoking"}
+  - {id: smoke-pos-04, clip: smoke-pos-04.mp4, check: smoking, at: 4.0, expect: confirmed, note: "smoking"}
+  - {id: smoke-pos-05, clip: smoke-pos-05.mp4, check: smoking, at: 2.0, expect: confirmed, note: "smoking"}
+  - {id: smoke-neg-01, clip: smoke-neg-01.mp4, check: smoking, at: 5.0, expect: rejected, note: "not smoking: drinking 3"}
+  - {id: smoke-neg-02, clip: smoke-neg-02.mp4, check: smoking, at: 4.0, expect: rejected, note: "not smoking: eating 1"}
+  - {id: smoke-neg-03, clip: smoke-neg-03.mp4, check: smoking, at: 3.5, expect: rejected, note: "not smoking: eating 3"}
+  - {id: smoke-neg-04, clip: smoke-neg-04.mp4, check: smoking, at: 2.5, expect: rejected, note: "not smoking: mouth covering 1"}
+  - {id: smoke-neg-05, clip: smoke-neg-05.mp4, check: smoking, at: 5.0, expect: rejected, note: "not smoking: mouth covering 2"}
+  # --- helmet (pos = PPE worn, so the no-hard-hat alert is false; neg = no hard hat)
+  - {id: ppe-pos-01, clip: ppe-pos-01.mp4, check: helmet, at: 2.5, expect: rejected, note: "hard hat on: a false alarm"}
+  - {id: ppe-pos-02, clip: ppe-pos-02.mp4, check: helmet, at: 3.0, expect: rejected, note: "hard hat on: a false alarm"}
+  - {id: ppe-pos-03, clip: ppe-pos-03.mp4, check: helmet, box: [385, 82, 608, 408], at: 5.0, expect: rejected, note: "hard hat on: a false alarm"}
+  - {id: ppe-neg-01, clip: ppe-neg-01.mp4, check: helmet, at: 5.0, expect: confirmed, note: "no hard hat (no mask, vest or gloves)"}
+  - {id: ppe-neg-02, clip: ppe-neg-02.mp4, check: helmet, at: 5.0, expect: confirmed, note: "no hard hat (mask and vest, no gloves)"}
+  - {id: ppe-neg-03, clip: ppe-neg-03.mp4, check: helmet, at: 5.0, expect: confirmed, note: "no hard hat (mask, vest and gloves)"}

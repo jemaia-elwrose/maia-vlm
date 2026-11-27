@@ -163,13 +163,12 @@ def verify(
         return verdict
     verdict = answer["verdict"]
     reason = ""
-    if check.verdict_from is not None:
-        value = answer[check.verdict_from.field]
-        derived = check.verdict_from.map[value]
+    if check.verdict_rules:
+        derived, why = _derive(check, answer)
         if derived != verdict:
-            # trust the specific answer, but a contradiction never becomes a confirmation
+            # trust the specific answers, but a contradiction never becomes a confirmation
             final = "unclear" if derived == "confirmed" else derived
-            reason = f"verdict '{verdict}' contradicts {check.verdict_from.field}='{value}'; using '{final}'"
+            reason = f"verdict '{verdict}' contradicts {why}; using '{final}'"
             status, verdict = "inconsistent", final
     ungrounded = guard.grounding(answer, images, event.box, backend.box_format, check.grounding.min_inside)
     if ungrounded:
@@ -185,6 +184,16 @@ def verify(
     )
     _save(save_to, images, event, out, backend)
     return out
+
+
+def _derive(check: Check, answer: dict) -> tuple[str, str]:
+    """Confirmed only if every rule says confirmed; otherwise rejected beats unclear."""
+    results = [(rule.map[answer[rule.field]], f"{rule.field}='{answer[rule.field]}'") for rule in check.verdict_rules]
+    for wanted in ("rejected", "unclear"):
+        hits = [why for got, why in results if got == wanted]
+        if hits:
+            return wanted, ", ".join(hits)
+    return "confirmed", ", ".join(why for _, why in results)
 
 
 def _save(folder: str | Path | None, images: Sequence[Shot], event: Event, verdict: Verdict, backend: Backend) -> None:

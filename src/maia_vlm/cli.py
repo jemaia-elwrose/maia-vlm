@@ -80,7 +80,10 @@ def cmd_check(a: argparse.Namespace) -> int:
 def cmd_run(a: argparse.Namespace) -> int:
     from .runner import run, table
 
-    path, summary = run(a.cases, _backend(a), a.out, a.media, a.only, tuple(a.dir), save_images=a.save_images)
+    path, summary = run(
+        a.cases, _backend(a), a.out, a.media, a.only, tuple(a.dir), save_images=a.save_images, infer=a.infer,
+        boxes_from=a.boxes_from,
+    )
     rows = [json.loads(line) for line in path.read_text().splitlines()]
     print()
     print(table(rows))
@@ -160,6 +163,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--only", action="append", help="run only cases whose id starts with this (repeatable)")
     p.add_argument("--dir", action="append", default=[], help="another folder of check YAML files")
     p.add_argument("--save-images", action="store_true", help="also write each case's images, boxes drawn")
+    p.add_argument("--infer", help="maia-infer endpoint for cases with box: auto (e.g. tcp://localhost:5555)")
+    p.add_argument("--boxes-from", type=Path, help="reuse the time and box of each case from an earlier results .jsonl")
     _backend_args(p)
     p.set_defaults(fn=cmd_run)
 

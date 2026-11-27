@@ -1,5 +1,5 @@
 id: fall
-version: 1
+version: 4
 title: Did the person fall, and are they still down?
 applies_to:
   labels:
@@ -7,26 +7,64 @@ applies_to:
   - fall
 review_only: true
 frames:
-  count: 6
+  count: 8
   window_s:
   - -2.0
-  - 3.0
+  - 2.0
   crop: full
   max_side: 448
 prompt: |
-  These {n_frames} frames cover {span_s} s around a possible fall of {subject}.
-  Did the person fall (an uncontrolled drop to the floor), and are they still on the floor in the last image?
-  - confirmed: they fell and are still down in the last image.
-  - rejected: no fall; for example they sat, knelt, bent down, lay down on purpose, or got up again normally.
-  - unclear: the images do not show it clearly.
+  These {n_frames} frames, in time order, cover {span_s} s around a possible fall of {subject}.
+  First, in postures, give that person's posture in each image, in order.
+  Then set landed_on, where their body ended up when they went down:
+  - floor: on the floor or a mat lying on the floor.
+  - bed_or_furniture: on a bed, sofa, chair or table.
+  - never_down: they stayed standing, walking, bending or crouching on their feet.
+  - not_visible: the images do not show it.
+  Then set how_down:
+  - fell: from upright to the floor in about a second, out of control.
+  - lowered_self: they bent, crouched, knelt, sat or lay down under control, using their hands, legs or furniture.
+  - not_down: they did not go down in these images, or were already down in the first image.
+  - not_visible: the images do not show it.
+  Then the verdict: confirmed only for a fall to the floor; rejected otherwise; unclear if not visible.
   The description says what happened, in order.
 answer:
   type: object
   required:
+  - postures
+  - landed_on
+  - how_down
   - verdict
   - description
   additionalProperties: false
   properties:
+    postures:
+      type: array
+      items:
+        enum:
+        - standing
+        - walking
+        - bending
+        - crouching
+        - kneeling
+        - sitting
+        - lying
+        - falling
+        - not_visible
+      minItems: 1
+      maxItems: 8
+    landed_on:
+      enum:
+      - floor
+      - bed_or_furniture
+      - never_down
+      - not_visible
+    how_down:
+      enum:
+      - fell
+      - lowered_self
+      - not_down
+      - not_visible
     verdict:
       enum:
       - confirmed
@@ -56,3 +94,16 @@ answer:
               type: number
             minItems: 4
             maxItems: 4
+verdict_from:
+- field: landed_on
+  map:
+    floor: confirmed
+    bed_or_furniture: rejected
+    never_down: rejected
+    not_visible: unclear
+- field: how_down
+  map:
+    fell: confirmed
+    lowered_self: rejected
+    not_down: rejected
+    not_visible: unclear

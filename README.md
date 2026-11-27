@@ -186,12 +186,20 @@ First measurements, the same 4-frame `describe` check on the same clips:
 | Tesla T4 16 GB | vLLM, Qwen3-VL-4B-Instruct (fp16) | 737 | 2-3 s |
 | Apple M4 (MacBook Air, 16 GB) | Ollama, qwen3-vl:4b-instruct | 4,457 | 27-38 s |
 
+On the full public-v1 set (46 cases, five checks; [results](sets/public-v1/RESULTS.md)):
+
+| Machine | Server, model | Correct | False alarms | Latency p50 |
+|---|---|---|---|---|
+| Tesla T4 16 GB | vLLM, Qwen3-VL-4B-Instruct (fp16) | 43 / 46 | 2 / 23 | 5.1 s |
+| Apple M4 (MacBook Air, 16 GB) | mlx-vlm, Qwen3-VL-4B-Instruct (8-bit) | 41 / 46 | 4 / 23 | 10.5 s |
+
 Checks with close-ups and evidence took 7-12 s on the T4: most of that was the model writing an
 evidence box per image, so evidence is now one box, on the event image. On a laptop, slow 6-7
 image checks need `--timeout` above the default 120 s.
 
-The gap is mostly the server, not the chip: Ollama turns each 448 px image into about six
-times as many tokens as vLLM does. mlx-vlm and LM Studio (MLX) are the next Mac candidates.
+The Ollama gap was mostly the server, not the chip: it turns each 448 px image into about six
+times as many tokens as vLLM does. mlx-vlm uses the same number as vLLM, and on a Mac it is the
+server to use: `scripts/mlx-run.sh` starts it, waits for the model to load and runs a set.
 
 ## Testing on maia-gateway clips
 
@@ -222,7 +230,7 @@ example from a maia-ring ring.
 
 ## Roadmap
 
-- **0.1.2** eval: broader public sets with deliberate negatives; Ollama vs mlx-vlm vs vLLM.
+- **0.1.2** eval (done): public-v1, 46 cases with deliberate negatives; vLLM on a T4 vs mlx-vlm on an M4.
 - **0.2** fine-tuning: a QLoRA recipe for a 2-4B model, measured with the same harness.
 
 ## Development
