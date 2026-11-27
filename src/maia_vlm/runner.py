@@ -247,9 +247,7 @@ def run(
         absent = [c.id for c in cases if c.id not in reused]
         if absent:
             raise ValueError(f"{boxes_from} has no result for: {', '.join(absent)}")
-        cases = [
-            c.model_copy(update={"at": reused[c.id]["at"], "box": _box(reused[c.id]["box"])}) for c in cases
-        ]
+        cases = [c.model_copy(update={"at": reused[c.id]["at"], "box": _box(reused[c.id]["box"])}) for c in cases]
     auto = any(c.box in ("auto", "auto-group") for c in cases)
     detector = Detector(infer) if infer and auto else None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")

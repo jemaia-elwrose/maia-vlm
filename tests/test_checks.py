@@ -98,7 +98,6 @@ def test_the_public_set_loads_and_is_balanced():
         assert mine.count("confirmed") == mine.count("rejected"), check
 
 
-
 def test_version_is_written_once():
     from pathlib import Path
 

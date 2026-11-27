@@ -81,7 +81,14 @@ def cmd_run(a: argparse.Namespace) -> int:
     from .runner import run, table
 
     path, summary = run(
-        a.cases, _backend(a), a.out, a.media, a.only, tuple(a.dir), save_images=a.save_images, infer=a.infer,
+        a.cases,
+        _backend(a),
+        a.out,
+        a.media,
+        a.only,
+        tuple(a.dir),
+        save_images=a.save_images,
+        infer=a.infer,
         boxes_from=a.boxes_from,
     )
     rows = [json.loads(line) for line in path.read_text().splitlines()]

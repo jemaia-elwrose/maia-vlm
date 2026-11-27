@@ -34,7 +34,8 @@ def test_the_prompt_carries_the_box_in_the_models_format(server, backend, clip):
 def test_invalid_answer_is_repaired_once(server, backend, clip):
     server.replies = [
         "Sure! The person has no helmet.",
-        '```json\n{"verdict": "confirmed", "description": "Bare head, no hard hat.", "hard_hat": "no", "head_covering": "none"}\n```',
+        '```json\n{"verdict": "confirmed", "description": "Bare head, no hard hat.", '
+        '"hard_hat": "no", "head_covering": "none"}\n```',
     ]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert v.verdict == "confirmed" and v.status == "repaired" and v.calls == 2
@@ -78,30 +79,58 @@ def test_ungrounded_evidence_lowers_the_verdict_to_unclear(server, backend, clip
 
 
 def test_review_only_checks_flag_a_confirmation_for_review(server, backend, clip):
-    server.replies = [{"postures": ["standing", "falling", "lying"], "landed_on": "floor", "how_down": "fell", "verdict": "confirmed",
-                       "description": "Fell and stays down.", "still_down": True}]  # fmt: skip
+    server.replies = [
+        {
+            "postures": ["standing", "falling", "lying"],
+            "landed_on": "floor",
+            "how_down": "fell",
+            "verdict": "confirmed",
+            "description": "Fell and stays down.",
+            "still_down": True,
+        }
+    ]
     v = verify_clip(clip, PERSON, find_check("fall"), backend)
     assert v.verdict == "confirmed" and v.needs_review
 
 
 def test_lying_down_on_purpose_is_not_a_fall_even_if_the_model_says_confirmed(server, backend, clip):
-    server.replies = [{"postures": ["standing", "sitting", "lying"], "landed_on": "floor", "how_down": "lowered_self", "verdict": "confirmed",
-                       "description": "Lies down on the mat."}]  # fmt: skip
+    server.replies = [
+        {
+            "postures": ["standing", "sitting", "lying"],
+            "landed_on": "floor",
+            "how_down": "lowered_self",
+            "verdict": "confirmed",
+            "description": "Lies down on the mat.",
+        }
+    ]
     v = verify_clip(clip, PERSON, find_check("fall"), backend)
     assert (v.verdict, v.status) == ("rejected", "inconsistent")
     assert "postures" in server.prompt() and len(server.images()) == 8
 
 
 def test_a_fall_onto_a_bed_is_not_confirmed_even_if_the_model_says_it_fell(server, backend, clip):
-    server.replies = [{"postures": ["standing", "falling", "lying"], "landed_on": "bed_or_furniture", "how_down": "fell",
-                       "verdict": "confirmed", "description": "Falls onto the bed."}]  # fmt: skip
+    server.replies = [
+        {
+            "postures": ["standing", "falling", "lying"],
+            "landed_on": "bed_or_furniture",
+            "how_down": "fell",
+            "verdict": "confirmed",
+            "description": "Falls onto the bed.",
+        }
+    ]
     v = verify_clip(clip, PERSON, find_check("fall"), backend)
     assert (v.verdict, v.status) == ("rejected", "inconsistent") and "landed_on='bed_or_furniture'" in v.reason
 
 
 def test_a_hard_hat_over_a_hood_rejects_the_alert(server, backend, clip):
-    server.replies = [{"hard_hat": "yes", "head_covering": "cap_or_hood", "verdict": "confirmed",
-                       "description": "Hood with a hard hat over it."}]  # fmt: skip
+    server.replies = [
+        {
+            "hard_hat": "yes",
+            "head_covering": "cap_or_hood",
+            "verdict": "confirmed",
+            "description": "Hood with a hard hat over it.",
+        }
+    ]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert (v.verdict, v.status) == ("rejected", "inconsistent")
 
@@ -122,7 +151,9 @@ def test_parse_accepts_common_wrappings(text):
 
 
 def test_cli_check_prints_the_verdict(server, backend, clip, monkeypatch, capsys):
-    server.replies = [{"verdict": "rejected", "description": "A hard hat is on.", "hard_hat": "yes", "head_covering": "none"}]
+    server.replies = [
+        {"verdict": "rejected", "description": "A hard hat is on.", "hard_hat": "yes", "head_covering": "none"}
+    ]
     monkeypatch.setattr("maia_vlm.cli._backend", lambda a: backend)
     with pytest.raises(SystemExit) as done:
         main(["check", str(clip), "--check", "helmet", "--box", "300,120,380,220", "--at", "2"])
@@ -178,13 +209,21 @@ def test_cli_overrides_frames_and_size(server, backend, clip, monkeypatch, capsy
     assert bad.value.code == 1  # validated like the check file itself
 
 
-@pytest.mark.parametrize("image, box, status", [(1, [0, 0, 100, 100], "ok"), (2, [400, 400, 600, 600], "ok"),
-                                               (2, [0, 0, 100, 100], "ungrounded")])  # fmt: skip
+@pytest.mark.parametrize(
+    "image, box, status",
+    [(1, [0, 0, 100, 100], "ok"), (2, [400, 400, 600, 600], "ok"), (2, [0, 0, 100, 100], "ungrounded")],
+)
 def test_evidence_is_held_to_the_box_on_the_event_image_only(server, backend, clip, image, box, status):
     # helmet: 3 close-ups, the event one is image 2; the subject may have moved in images 1 and 3
     evidence = [{"image": image, "box": box}]
     server.replies = [
-        {"hard_hat": "no", "head_covering": "none", "verdict": "confirmed", "description": "Bare head.", "evidence": evidence}
+        {
+            "hard_hat": "no",
+            "head_covering": "none",
+            "verdict": "confirmed",
+            "description": "Bare head.",
+            "evidence": evidence,
+        }
     ]
     v = verify_clip(clip, PERSON, find_check("helmet"), backend)
     assert v.status == status
@@ -272,8 +311,15 @@ def test_a_timeout_is_no_verdict_with_the_time_spent(server, backend, clip):
 
 
 def test_save_images_draws_the_boxes_on_copies(server, backend, clip, tmp_path):
-    server.replies = [{"hard_hat": "no", "head_covering": "none", "verdict": "confirmed", "description": "Bare head.",
-                       "evidence": [{"image": 2, "box": [400, 400, 600, 600]}]}]  # fmt: skip
+    server.replies = [
+        {
+            "hard_hat": "no",
+            "head_covering": "none",
+            "verdict": "confirmed",
+            "description": "Bare head.",
+            "evidence": [{"image": 2, "box": [400, 400, 600, 600]}],
+        }
+    ]
     verify_clip(clip, PERSON, find_check("helmet"), backend, save_to=tmp_path / "shots")
     names = sorted(p.name for p in (tmp_path / "shots").iterdir())
     assert names == ["01-subject-1.00s.jpg", "02-subject-event.jpg", "03-subject-3.00s.jpg", "verdict.json"]
